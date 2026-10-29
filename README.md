@@ -1,76 +1,109 @@
-# NorteLeads - Base de datos para seguimiento comercial
+# NorteLeads
 
-Proyecto de **Bases de Datos II** para negocios de Cartago y el norte del Valle del Cauca. NorteLeads permite registrar los prospectos que contactan a cada negocio, asignarles un agente, guardar los seguimientos y programar citas. También registra los planes, las suscripciones y los pagos.
+## Avance 2 de Bases de Datos II
 
-La base tiene diez tablas relacionadas. Incluye datos de prueba, tres procedimientos almacenados y un trigger que guarda los cambios de estado de los prospectos en una tabla de auditoría.
+Base de datos para organizar la atención comercial de microempresas de Cartago y el norte del Valle del Cauca. Registra negocios, prospectos, agentes, seguimientos, citas, planes, suscripciones, pagos y cambios de estado.
 
-## Estructura del proyecto
+El proyecto utiliza MariaDB 11.4, PHP 8.3 y phpMyAdmin en Docker. Incluye diez tablas, tres procedimientos con parámetros IN, OUT e INOUT y validaciones SIGNAL, dos funciones, dos triggers, dos vistas y tres roles con sus usuarios.
 
-```text
-norte_leads_db/
-├── docs/
-│   └── informe_avance.pdf
-├── modelado/
-│   └── mer.mwb
-├── sql/
-│   ├── esquema.sql
-│   ├── datos_prueba.sql
-│   ├── procedimientos.sql
-│   └── triggers.sql
-├── .gitignore
-├── docker-compose.yml
-├── Dockerfile
-└── README.md
-```
+## Archivos
 
-## Contenido de la entrega
-
-| Archivo | Descripción |
+| Ruta | Contenido |
 | --- | --- |
-| `docs/informe_avance.pdf` | Informe del proyecto y evidencias de ejecución. |
-| `sql/esquema.sql` | Creación de la base de datos, las tablas y sus relaciones. |
-| `sql/datos_prueba.sql` | Registros de prueba para comprobar la base de datos. |
-| `sql/procedimientos.sql` | Definición de los procedimientos almacenados. |
-| `sql/triggers.sql` | Definición del trigger de auditoría. |
-| `modelado/mer.mwb` | Modelo de la base de datos editable en MySQL Workbench. |
-| `.gitignore` | Archivos que se excluyen de Git. |
-| `docker-compose.yml` | Configuración de los contenedores del proyecto. |
-| `Dockerfile` | Instrucciones para construir el contenedor de la aplicación. |
+| `docker-compose.yml` | Servicios, puertos, volumen e inicialización SQL. |
+| `Dockerfile` e `index.php` | Aplicación PHP que consulta la vista enmascarada. |
+| `sql/esquema.sql` | Diez tablas, claves y restricciones. |
+| `sql/datos_prueba.sql` | Datos ficticios, correos cifrados y hashes bcrypt. |
+| `sql/procedimientos.sql` | Listar, contar y registrar intentos. |
+| `sql/funciones.sql` | Contar seguimientos y recuperar un correo para el administrador. |
+| `sql/triggers.sql` | Auditoría de cambios y validación del resumen. |
+| `sql/vistas.sql` | Vista con JOIN y vista con datos enmascarados. |
+| `sql/seguridad.sql` | Roles, usuarios y privilegios. |
+| `sql/actualizar_avance2.sql` | Migración de la base del primer corte. |
+| `sql/pruebas.sql` | Pruebas funcionales para ejecutar por bloques. |
+| `sql/pruebas_usuarios.sql` | Pruebas permitidas y denegadas por usuario. |
+| `sql/video.sql` | Consultas breves del video. |
+| `config/mariadb.cnf` | Política de contraseñas y directorio del secreto. |
+| `modelado/mer.mwb` | Modelo actualizado para MySQL Workbench. |
+| `docs/` | Informe, guion del video y explicación del código. |
 
-## Requisitos
+## Instalación sobre una base nueva
 
-- Docker con Docker Compose.
-- MySQL Workbench para consultar la base y abrir el modelo `.mwb`.
-
-## Cómo ejecutarlo
-
-1. Abrir una terminal en la carpeta `norte_leads_db` y levantar los contenedores:
+En WSL, dentro de la carpeta que contiene `docker-compose.yml`:
 
 ```bash
-docker compose up -d --build
+bash preparar.sh
+docker compose up -d --build --wait
 docker compose ps
 ```
 
-2. Comprobar que los servicios aparecen en ejecución con `docker compose ps`. Abrir phpMyAdmin en <http://localhost:8081> para revisar la base de datos. Las conexiones y sus puertos se definen en `docker-compose.yml`.
+`preparar.sh` crea una clave aleatoria local para cifrar correos. Conservar `secrets/clave_cifrado.txt` junto con el respaldo de la base; se excluye de Git y del contexto de construcción de Docker. No se necesitan archivos `.env`.
 
-3. En MySQL Workbench, conectarse a MariaDB. En la configuración usada para este proyecto, la conexión es a `127.0.0.1` por el puerto `3307`; el usuario y la contraseña están definidos en `docker-compose.yml`.
+Los siete scripts montados en Compose se ejecutan automáticamente cuando MariaDB encuentra un volumen vacío. No ejecutar nuevamente `esquema.sql` ni `datos_prueba.sql` sobre una base que ya tenga registros.
 
-4. Si la base de datos está vacía, abrir y ejecutar estos archivos en Workbench, **uno por uno y en este orden**:
+## Actualización de la base del primer corte
 
-1. `sql/esquema.sql`
-2. `sql/procedimientos.sql`
-3. `sql/triggers.sql`
-4. `sql/datos_prueba.sql`
+Copiar los archivos del avance a la carpeta del repositorio existente, conservando su carpeta `.git`. Mantener el nombre de carpeta/proyecto Compose para reutilizar su volumen. Ejecutar:
 
-El trigger se crea antes de insertar los datos para que los cambios de estado registrados por `datos_prueba.sql` queden en la tabla de auditoría. Si la base ya contiene los registros, no ejecutes de nuevo `datos_prueba.sql`.
-
-5. Para comprobar que se crearon las tablas y se cargaron los datos, ejecutar en Workbench:
-
-```sql
-USE norte_leads;
-SHOW TABLES;
-SELECT COUNT(*) AS total_prospectos FROM prospectos;
-SELECT * FROM auditoria_prospectos;
+```bash
+bash actualizar.sh
 ```
 
-6. Abrir `modelado/mer.mwb` con MySQL Workbench para mostrar el modelo de la base de datos. El desarrollo del proyecto y sus evidencias se encuentran en `docs/informe_avance.pdf`.
+El script levanta el entorno, pide la contraseña root actual, crea un respaldo en `respaldos/` y aplica la migración y las definiciones nuevas. En el Compose del primer corte la contraseña root predeterminada era `root_demo_2026`; si fue modificada, usar la vigente. Cambiar el valor de `MARIADB_ROOT_PASSWORD` en Compose no modifica la contraseña de un volumen existente.
+
+La migración se ejecuta **una sola vez**: cifra los correos existentes y elimina su columna legible, añade los hashes y la cuenta de conexión a la auditoría. Conserva las filas y no repite los datos de prueba. Los registros antiguos de auditoría muestran `NO_REGISTRADO_AVANCE_1` en la nueva columna. La cuenta anterior `norteleads_app` queda bloqueada; las conexiones usan las cuentas siguientes.
+
+## Accesos locales de demostración
+
+Host Workbench: `127.0.0.1`; puerto: `3307`; esquema: `norte_leads`. En phpMyAdmin, servidor `db`.
+
+| Usuario | Contraseña local | Rol |
+| --- | --- | --- |
+| `admin_nl` | `AdminNL_2026*Demo` | Administración de los datos de NorteLeads; no administra el servidor. |
+| `agente_nl` | `AgenteNL_2026*Demo` | Rutinas de seguimiento, lectura operativa y cambio de estado. |
+| `consulta_nl` | `ConsultaNL_2026*Demo` | Lectura de la vista enmascarada. |
+
+En una instalación nueva, root usa `RootNL_2026*Demo`. Son credenciales públicas del laboratorio con datos ficticios; deben sustituirse para un despliegue real.
+
+- Aplicación: <http://localhost:8080>
+- phpMyAdmin: <http://localhost:8081>
+
+Cada cuenta tiene un rol predeterminado. Para probar la seguridad, abrir conexiones diferentes en Workbench y comprobar `SELECT USER(), CURRENT_ROLE();`.
+
+## Pruebas
+
+1. Abrir `sql/pruebas.sql` con `admin_nl`. Ejecutar los bloques de manera individual: algunos producen errores deliberadamente.
+2. Abrir `sql/pruebas_usuarios.sql` y ejecutar cada grupo en la conexión del usuario indicado.
+3. Comprobar hash con sal en WSL:
+
+```bash
+docker compose exec -T app php /var/www/html/scripts/hash_demo.php
+```
+
+Los hashes de `agentes.clave_hash` utilizan bcrypt con sal incluida. Son contraseñas de aplicación de prueba, distintas de las cuentas de acceso a MariaDB. El correo de cada prospecto se guarda en `email_cifrado` con AES-256-CBC y un IV de 16 bytes por registro; la clave se monta únicamente en el servicio `db`. El rol administrador puede ejecutar `fn_email_prospecto`; los otros dos roles no reciben ese permiso.
+
+## Política de contraseñas
+
+MariaDB carga `simple_password_check` al iniciar. Exige mínimo doce caracteres, un número, una mayúscula, una minúscula y un carácter especial. La configuración persiste en `config/mariadb.cnf`; `strict_password_validation` permanece activo. Las cuentas nuevas del laboratorio cumplen esa regla. La política valida contraseñas nuevas o modificadas, no cambia automáticamente una contraseña anterior.
+
+## Informe y sustentación
+
+El informe está en `docs/Avance2_Roman_Antoine.pdf`, con copia editable en Word. Completar el programa académico, el enlace público del video, la exportación del MER y las capturas obtenidas en el Docker del estudiante. `docs/paso_a_paso.md` indica cómo obtenerlas; `docs/guion_video.md` organiza un video de hasta cinco minutos. Las explicaciones para estudiar están en `docs/explicacion_codigo.md`.
+
+## Etiqueta del repositorio
+
+Después de incorporar el informe final y las evidencias, desde el repositorio existente:
+
+```bash
+git add .
+git commit -m "Avance 2 - segundo corte"
+git tag avance-2
+git push origin master --tags
+```
+
+La rama del repositorio de referencia es `master`. Comprobar `git branch --show-current` antes de publicar. No crear de nuevo una etiqueta que ya exista.
+
+
+## Video de sustentación
+
+[Ver video del segundo avance](https://www.loom.com/share/bc72e2653a144b59bde648fed450bd8d)

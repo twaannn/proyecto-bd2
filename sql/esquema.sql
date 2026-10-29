@@ -32,6 +32,7 @@ CREATE TABLE agentes (
     id_agente SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(120) NOT NULL,
     documento VARCHAR(20) NOT NULL,
+    clave_hash VARCHAR(255) NULL,
     telefono VARCHAR(20) NOT NULL,
     email VARCHAR(120) NOT NULL,
     rol ENUM('ADMINISTRADOR','COORDINADOR','AGENTE') NOT NULL DEFAULT 'AGENTE',
@@ -89,7 +90,8 @@ CREATE TABLE prospectos (
     id_agente SMALLINT UNSIGNED NOT NULL,
     nombre VARCHAR(120) NOT NULL,
     telefono VARCHAR(20) NOT NULL,
-    email VARCHAR(120) NULL,
+    email_cifrado VARBINARY(256) NULL,
+    email_iv BINARY(16) NULL,
     fuente ENUM('WHATSAPP','FACEBOOK','INSTAGRAM','REFERIDO','WEB','OTRO') NOT NULL,
     estado ENUM('NUEVO','CONTACTADO','CALIFICADO','CITA','GANADO','PERDIDO') NOT NULL DEFAULT 'NUEVO',
     valor_estimado DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0,
@@ -176,6 +178,7 @@ CREATE TABLE auditoria_prospectos (
     estado_nuevo VARCHAR(20) NOT NULL,
     fecha_cambio TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     usuario_bd VARCHAR(128) NOT NULL,
+    usuario_conexion VARCHAR(128) NOT NULL,
     CONSTRAINT fk_auditoria_prospecto FOREIGN KEY (id_prospecto)
         REFERENCES prospectos (id_prospecto)
         ON UPDATE CASCADE ON DELETE CASCADE,

@@ -1,5 +1,17 @@
 USE norte_leads;
 
+-- Clave aleatoria local: no se incluye en Git.
+SET @clave_nl = UNHEX(LEFT(LOAD_FILE('/run/secrets/clave_cifrado'), 64));
+
+DELIMITER $$
+BEGIN NOT ATOMIC
+ IF @clave_nl IS NULL OR OCTET_LENGTH(@clave_nl) <> 32 THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No se pudo leer la clave local de cifrado';
+ END IF;
+END$$
+DELIMITER ;
+
+
 -- Datos ficticios creados solo para fines academicos.
 
 INSERT INTO municipios (id_municipio, nombre, departamento) VALUES
@@ -74,30 +86,30 @@ INSERT INTO suscripciones (
 (10, 10, 5, '2026-09-01', NULL, 'ACTIVA', 900000, 'INSTAGRAM');
 
 INSERT INTO prospectos (
-    id_prospecto, id_negocio, id_agente, nombre, telefono, email,
+    id_prospecto, id_negocio, id_agente, nombre, telefono, email_cifrado, email_iv,
     fuente, estado, valor_estimado, consentimiento_datos,
     fecha_registro, fecha_ultima_gestion
 ) VALUES
-(1, 1, 3, 'Ana Beltran', '3101000001', 'ana.beltran@example.test', 'WHATSAPP', 'NUEVO', 180000, TRUE, '2026-09-02 08:10:00', '2026-09-02 08:20:00'),
-(2, 1, 3, 'Luis Cardona', '3101000002', 'luis.cardona@example.test', 'INSTAGRAM', 'NUEVO', 240000, TRUE, '2026-09-03 09:15:00', '2026-09-03 09:40:00'),
-(3, 2, 4, 'Camila Arias', '3101000003', 'camila.arias@example.test', 'FACEBOOK', 'NUEVO', 280000000, TRUE, '2026-09-03 11:05:00', '2026-09-03 11:30:00'),
-(4, 2, 4, 'Julian Perez', '3101000004', 'julian.perez@example.test', 'REFERIDO', 'NUEVO', 190000000, TRUE, '2026-09-04 14:20:00', '2026-09-04 15:00:00'),
-(5, 3, 5, 'Sofia Herrera', '3101000005', 'sofia.herrera@example.test', 'WEB', 'NUEVO', 1200000, TRUE, '2026-09-05 10:00:00', '2026-09-05 10:45:00'),
-(6, 3, 5, 'Samuel Diaz', '3101000006', 'samuel.diaz@example.test', 'WHATSAPP', 'NUEVO', 900000, TRUE, '2026-09-05 16:10:00', '2026-09-05 16:30:00'),
-(7, 4, 6, 'Maria Jose Lopez', '3101000007', 'maria.lopez@example.test', 'INSTAGRAM', 'NUEVO', 3200000, TRUE, '2026-09-06 09:30:00', '2026-09-06 10:00:00'),
-(8, 4, 6, 'Carlos Muñoz', '3101000008', 'carlos.munoz@example.test', 'WHATSAPP', 'NUEVO', 4600000, TRUE, '2026-09-06 13:15:00', '2026-09-06 13:40:00'),
-(9, 5, 7, 'Isabella Gomez', '3101000009', 'isabella.gomez@example.test', 'FACEBOOK', 'NUEVO', 110000, TRUE, '2026-09-07 08:50:00', '2026-09-07 09:20:00'),
-(10, 5, 7, 'Sebastian Cano', '3101000010', 'sebastian.cano@example.test', 'REFERIDO', 'NUEVO', 150000, TRUE, '2026-09-07 17:05:00', '2026-09-07 17:30:00'),
-(11, 6, 8, 'Valeria Ortiz', '3101000011', 'valeria.ortiz@example.test', 'WHATSAPP', 'NUEVO', 980000, TRUE, '2026-09-08 07:40:00', NULL),
-(12, 6, 8, 'Miguel Angel Rojas', '3101000012', 'miguel.rojas@example.test', 'OTRO', 'NUEVO', 750000, TRUE, '2026-09-08 12:25:00', NULL),
-(13, 7, 9, 'Mariana Jaramillo', '3101000013', 'mariana.j@example.test', 'WEB', 'NUEVO', 620000, TRUE, '2026-09-09 08:15:00', NULL),
-(14, 7, 9, 'Tomas Escobar', '3101000014', 'tomas.escobar@example.test', 'WHATSAPP', 'NUEVO', 450000, TRUE, '2026-09-09 15:45:00', NULL),
-(15, 8, 10, 'Gabriela Sanchez', '3101000015', 'gabriela.s@example.test', 'INSTAGRAM', 'NUEVO', 170000, TRUE, '2026-09-10 09:10:00', NULL),
-(16, 8, 10, 'Emiliano Castro', '3101000016', 'emiliano.c@example.test', 'REFERIDO', 'NUEVO', 230000, TRUE, '2026-09-10 16:35:00', NULL),
-(17, 9, 3, 'Renata Valencia', '3101000017', 'renata.v@example.test', 'WEB', 'NUEVO', 780000, TRUE, '2026-09-11 10:20:00', NULL),
-(18, 9, 3, 'Martin Osorio', '3101000018', 'martin.o@example.test', 'WHATSAPP', 'NUEVO', 560000, TRUE, '2026-09-11 18:05:00', NULL),
-(19, 10, 4, 'Luciana Gallego', '3101000019', 'luciana.g@example.test', 'INSTAGRAM', 'NUEVO', 290000, TRUE, '2026-09-12 09:55:00', NULL),
-(20, 10, 4, 'Agustin Vargas', '3101000020', 'agustin.v@example.test', 'FACEBOOK', 'NUEVO', 340000, TRUE, '2026-09-12 14:45:00', NULL);
+(1, 1, 3, 'Ana Beltran', '3101000001', AES_ENCRYPT('ana.beltran@example.test', @clave_nl, UNHEX('1258a7b2ee11d5e54c806daf1d41ee5d'), 'aes-256-cbc'), UNHEX('1258a7b2ee11d5e54c806daf1d41ee5d'), 'WHATSAPP', 'NUEVO', 180000, TRUE, '2026-09-02 08:10:00', '2026-09-02 08:20:00'),
+(2, 1, 3, 'Luis Cardona', '3101000002', AES_ENCRYPT('luis.cardona@example.test', @clave_nl, UNHEX('59976073b42012c5a4d6ab13cfe6ddad'), 'aes-256-cbc'), UNHEX('59976073b42012c5a4d6ab13cfe6ddad'), 'INSTAGRAM', 'NUEVO', 240000, TRUE, '2026-09-03 09:15:00', '2026-09-03 09:40:00'),
+(3, 2, 4, 'Camila Arias', '3101000003', AES_ENCRYPT('camila.arias@example.test', @clave_nl, UNHEX('c9e70034ba88f9848ceb0997b1630614'), 'aes-256-cbc'), UNHEX('c9e70034ba88f9848ceb0997b1630614'), 'FACEBOOK', 'NUEVO', 280000000, TRUE, '2026-09-03 11:05:00', '2026-09-03 11:30:00'),
+(4, 2, 4, 'Julian Perez', '3101000004', AES_ENCRYPT('julian.perez@example.test', @clave_nl, UNHEX('300578844b756f2a2c39283e2bd14736'), 'aes-256-cbc'), UNHEX('300578844b756f2a2c39283e2bd14736'), 'REFERIDO', 'NUEVO', 190000000, TRUE, '2026-09-04 14:20:00', '2026-09-04 15:00:00'),
+(5, 3, 5, 'Sofia Herrera', '3101000005', AES_ENCRYPT('sofia.herrera@example.test', @clave_nl, UNHEX('989cf7d9a1453585a126ffcd59913bfa'), 'aes-256-cbc'), UNHEX('989cf7d9a1453585a126ffcd59913bfa'), 'WEB', 'NUEVO', 1200000, TRUE, '2026-09-05 10:00:00', '2026-09-05 10:45:00'),
+(6, 3, 5, 'Samuel Diaz', '3101000006', AES_ENCRYPT('samuel.diaz@example.test', @clave_nl, UNHEX('0082275d76569b4dd2910b69f82ba97a'), 'aes-256-cbc'), UNHEX('0082275d76569b4dd2910b69f82ba97a'), 'WHATSAPP', 'NUEVO', 900000, TRUE, '2026-09-05 16:10:00', '2026-09-05 16:30:00'),
+(7, 4, 6, 'Maria Jose Lopez', '3101000007', AES_ENCRYPT('maria.lopez@example.test', @clave_nl, UNHEX('9e1037288c37411202f1abc04ca349b8'), 'aes-256-cbc'), UNHEX('9e1037288c37411202f1abc04ca349b8'), 'INSTAGRAM', 'NUEVO', 3200000, TRUE, '2026-09-06 09:30:00', '2026-09-06 10:00:00'),
+(8, 4, 6, 'Carlos Muñoz', '3101000008', AES_ENCRYPT('carlos.munoz@example.test', @clave_nl, UNHEX('83732adb539e4c59170039bfa4c1218c'), 'aes-256-cbc'), UNHEX('83732adb539e4c59170039bfa4c1218c'), 'WHATSAPP', 'NUEVO', 4600000, TRUE, '2026-09-06 13:15:00', '2026-09-06 13:40:00'),
+(9, 5, 7, 'Isabella Gomez', '3101000009', AES_ENCRYPT('isabella.gomez@example.test', @clave_nl, UNHEX('69a3d63da2531df0967085b9e712f7be'), 'aes-256-cbc'), UNHEX('69a3d63da2531df0967085b9e712f7be'), 'FACEBOOK', 'NUEVO', 110000, TRUE, '2026-09-07 08:50:00', '2026-09-07 09:20:00'),
+(10, 5, 7, 'Sebastian Cano', '3101000010', AES_ENCRYPT('sebastian.cano@example.test', @clave_nl, UNHEX('b517724e88b608167d7be823dcb59735'), 'aes-256-cbc'), UNHEX('b517724e88b608167d7be823dcb59735'), 'REFERIDO', 'NUEVO', 150000, TRUE, '2026-09-07 17:05:00', '2026-09-07 17:30:00'),
+(11, 6, 8, 'Valeria Ortiz', '3101000011', AES_ENCRYPT('valeria.ortiz@example.test', @clave_nl, UNHEX('0e07dac5cf4f88b5bb3eeb93f6a91442'), 'aes-256-cbc'), UNHEX('0e07dac5cf4f88b5bb3eeb93f6a91442'), 'WHATSAPP', 'NUEVO', 980000, TRUE, '2026-09-08 07:40:00', NULL),
+(12, 6, 8, 'Miguel Angel Rojas', '3101000012', AES_ENCRYPT('miguel.rojas@example.test', @clave_nl, UNHEX('f83fdb04df65d991012160115d574d23'), 'aes-256-cbc'), UNHEX('f83fdb04df65d991012160115d574d23'), 'OTRO', 'NUEVO', 750000, TRUE, '2026-09-08 12:25:00', NULL),
+(13, 7, 9, 'Mariana Jaramillo', '3101000013', AES_ENCRYPT('mariana.j@example.test', @clave_nl, UNHEX('a5f1e05ce7e7770ac8c571f57ed732f5'), 'aes-256-cbc'), UNHEX('a5f1e05ce7e7770ac8c571f57ed732f5'), 'WEB', 'NUEVO', 620000, TRUE, '2026-09-09 08:15:00', NULL),
+(14, 7, 9, 'Tomas Escobar', '3101000014', AES_ENCRYPT('tomas.escobar@example.test', @clave_nl, UNHEX('8110a16061cf07c6d523d494878e3cc7'), 'aes-256-cbc'), UNHEX('8110a16061cf07c6d523d494878e3cc7'), 'WHATSAPP', 'NUEVO', 450000, TRUE, '2026-09-09 15:45:00', NULL),
+(15, 8, 10, 'Gabriela Sanchez', '3101000015', AES_ENCRYPT('gabriela.s@example.test', @clave_nl, UNHEX('e964b5a446d177024e6ab9a73ae03b23'), 'aes-256-cbc'), UNHEX('e964b5a446d177024e6ab9a73ae03b23'), 'INSTAGRAM', 'NUEVO', 170000, TRUE, '2026-09-10 09:10:00', NULL),
+(16, 8, 10, 'Emiliano Castro', '3101000016', AES_ENCRYPT('emiliano.c@example.test', @clave_nl, UNHEX('04fbcea9ead16bfca161998840a89abb'), 'aes-256-cbc'), UNHEX('04fbcea9ead16bfca161998840a89abb'), 'REFERIDO', 'NUEVO', 230000, TRUE, '2026-09-10 16:35:00', NULL),
+(17, 9, 3, 'Renata Valencia', '3101000017', AES_ENCRYPT('renata.v@example.test', @clave_nl, UNHEX('6f900d7e2fefed9ece9c28c2172c56c6'), 'aes-256-cbc'), UNHEX('6f900d7e2fefed9ece9c28c2172c56c6'), 'WEB', 'NUEVO', 780000, TRUE, '2026-09-11 10:20:00', NULL),
+(18, 9, 3, 'Martin Osorio', '3101000018', AES_ENCRYPT('martin.o@example.test', @clave_nl, UNHEX('849908664757ac3340d84ba3b1d99dd6'), 'aes-256-cbc'), UNHEX('849908664757ac3340d84ba3b1d99dd6'), 'WHATSAPP', 'NUEVO', 560000, TRUE, '2026-09-11 18:05:00', NULL),
+(19, 10, 4, 'Luciana Gallego', '3101000019', AES_ENCRYPT('luciana.g@example.test', @clave_nl, UNHEX('3efa74b5b72351c0269270284614d062'), 'aes-256-cbc'), UNHEX('3efa74b5b72351c0269270284614d062'), 'INSTAGRAM', 'NUEVO', 290000, TRUE, '2026-09-12 09:55:00', NULL),
+(20, 10, 4, 'Agustin Vargas', '3101000020', AES_ENCRYPT('agustin.v@example.test', @clave_nl, UNHEX('30fba0cd4feabc4947dbb03160e2aae4'), 'aes-256-cbc'), UNHEX('30fba0cd4feabc4947dbb03160e2aae4'), 'FACEBOOK', 'NUEVO', 340000, TRUE, '2026-09-12 14:45:00', NULL);
 
 INSERT INTO seguimientos (
     id_seguimiento, id_prospecto, id_agente, fecha_hora, canal, tipo,
@@ -165,3 +177,17 @@ UPDATE prospectos SET estado = 'CITA' WHERE id_prospecto = 8;
 UPDATE prospectos SET estado = 'GANADO' WHERE id_prospecto = 9;
 UPDATE prospectos SET estado = 'PERDIDO' WHERE id_prospecto = 10;
 
+
+
+-- Hash bcrypt diferente por agente; la sal va dentro del hash.
+UPDATE agentes SET clave_hash = '$2b$12$d/ciNNhjvggmzmeSwdj6fOSyaYA1IfTYeN9ia/aHD/fRHrydE7seu' WHERE id_agente = 1;
+UPDATE agentes SET clave_hash = '$2b$12$Msqa4/PTFfKaRTDbYyvqJesG4QaG4GT7QFS6.mlZZJcKszpywscxu' WHERE id_agente = 2;
+UPDATE agentes SET clave_hash = '$2b$12$cek2fxapKbUvd1SbZVZ7Uu1G1HuNzdaih4ITWtIRynAXRdwBrijhC' WHERE id_agente = 3;
+UPDATE agentes SET clave_hash = '$2b$12$bnPzdCsp2KlwIhOutqLvxui53nfyRLeGLysiobc5m1QSmjG4kgwYC' WHERE id_agente = 4;
+UPDATE agentes SET clave_hash = '$2b$12$NrmpKn9b/P.4R4Lar3pegu.DJixlWFR2epSA4iEvf6VtLoBxEuuRu' WHERE id_agente = 5;
+UPDATE agentes SET clave_hash = '$2b$12$f2UfGqnEzHTe99sIhcna2OvoFlE2kypwSoXOBh4Bw9Htn/L0Fy0kS' WHERE id_agente = 6;
+UPDATE agentes SET clave_hash = '$2b$12$gIlaey./D8O5HoV6pYV6WerNola3UAPWxLdXstq86aTFCIwT6RMPK' WHERE id_agente = 7;
+UPDATE agentes SET clave_hash = '$2b$12$L22utYjS95MD1gEgCSEmXuK9donRgQ0/UAv6iA4CiCoP1UrvLBJ2K' WHERE id_agente = 8;
+UPDATE agentes SET clave_hash = '$2b$12$G/GpsZofdYXDB5truiKpeO0m9VZE9DGgGX6SuTdD5CAwnCm4hx.3C' WHERE id_agente = 9;
+UPDATE agentes SET clave_hash = '$2b$12$JnF65hZb4gh5YjGS9geWvOSegf/XoDQqJO0UFL1brFByThlTORi8q' WHERE id_agente = 10;
+SET @clave_nl = NULL;

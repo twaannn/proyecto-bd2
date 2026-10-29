@@ -1,0 +1,8 @@
+[mariadb]
+plugin_load_add = simple_password_check
+simple_password_check_minimal_length = 12
+simple_password_check_digits = 1
+simple_password_check_letters_same_case = 1
+simple_password_check_other_characters = 1
+strict_password_validation = ON
+secure_file_priv = /run/secrets/
